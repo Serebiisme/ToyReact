@@ -1,0 +1,31 @@
+{
+  "name": "toyreact",
+  "version": "1.0.0",
+  "description": "ToyReact created by Serebii",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Serebiisme/ToyReact.git"
+  },
+  "keywords": [
+    "React",
+    "Serebii"
+  ],
+  "author": "Serebii",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Serebiisme/ToyReact/issues"
+  },
+  "homepage": "https://github.com/Serebiisme/ToyReact#readme",
+  "devDependencies": {
+    "@babel/core": "^7.11.6",
+    "@babel/preset-env": "^7.11.5",
+    "babel-loader": "^8.1.0",
+    "webpack": "^4.29.0",
+    "webpack-cli": "^3.2.1",
+    "webpack-dev-server": "^3.11.0"
+  }
+}
