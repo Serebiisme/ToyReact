@@ -4,6 +4,8 @@
   "description": "ToyReact created by Serebii",
   "main": "main.js",
   "scripts": {
+    "build": "rm -rf ./dist && mkdir dist && ./node_modules/.bin/webpack",
+    "start": "npm run build && webpack-dev-server --open",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,6 +24,7 @@
   "homepage": "https://github.com/Serebiisme/ToyReact#readme",
   "devDependencies": {
     "@babel/core": "^7.11.6",
+    "@babel/plugin-transform-react-jsx": "^7.12.13",
     "@babel/preset-env": "^7.11.5",
     "babel-loader": "^8.1.0",
     "webpack": "^4.29.0",
