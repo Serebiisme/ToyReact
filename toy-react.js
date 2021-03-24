@@ -4,12 +4,13 @@ export function createElement(type, attrs, ...children) {
   if (typeof type === "string") {
     e = new ElementWrapper(type);
     // 设置属性
-    Object.entries(Object(attrs || {})).forEach(([key, value]) => {
-      e.setAttribute(key, value);
-    });
   } else {
     e = new type(attrs);
   }
+
+  Object.entries(Object(attrs || {})).forEach(([key, value]) => {
+    e.setAttribute(key, value);
+  });
 
   // 添加子元素
   // 这里的 child 实际是指
@@ -18,7 +19,10 @@ export function createElement(type, attrs, ...children) {
     if (typeof child === "string") {
       child = new TextWrapper(child);
     }
-    // 多子节点
+    if (child === null) {
+      return;
+    }
+    // 多子节点, 如 传入 this.props.children
     if (Array.isArray(child)) {
       for (const c of child) {
         e.appendChild(c);
@@ -46,6 +50,10 @@ class ElementWrapper {
       // 这里的value 其实是一个 callback, 确保驼峰
       this.root.addEventListener(eventName.replace(/^[\s\S]/, c => c.toLocaleLowerCase()), value)
     } else {
+      // className 特殊处理
+      if (name === 'className') {
+        name = 'class';
+      }
       // 属性绑定
       this.root.setAttribute(name, value)
     }
@@ -119,8 +127,21 @@ export class Component {
 
   // 重绘制逻辑
   rerender() {
-    this._range.deleteContents();
-    this[RENDER_TO_DOM](this._range)
+    // ! 错误代码, render to dom 需要一个新 range
+    // // this._range.deleteContents();
+    // // this[RENDER_TO_DOM](this._range)
+
+    let oldRange = this._range;
+
+    // 此处需要做一个 rang 副本
+    const range = document.createRange()
+    range.setStart(oldRange.startContainer, oldRange.startOffset)
+    range.setEnd(oldRange.startContainer, oldRange.startOffset)
+    this[RENDER_TO_DOM](range)
+    
+    oldRange.setStart(range.endContainer, range.endOffset)
+    oldRange.deleteContents()
+
   }
 
   // 从取单个元素 转变为 取一个范围
@@ -143,14 +164,27 @@ export class Component {
       return;
     }
     let merge = (oldState, newState) => {
-      Object.entries(newState).forEach(([key, value]) => {
-        if (value !== null && typeof value !== 'object') {
-          Reflect.set(oldState, key, value)
+      // Object.entries(newState).forEach(([key, value]) => {
+      //   if (value !== null && typeof value !== 'object') {
+      //     Reflect.set(oldState, key, value)
+      //   } else {
+      //     const oldValue = Reflect.get(oldState, key)
+      //     merge(oldValue, value)
+      //   }
+      // })
+      for (const key in newState) {
+        const value = newState[key];
+        if (typeof value !== 'object') {
+          oldState[key] = value
         } else {
-          const oldValue = Reflect.get(oldState, key)
+          // 数组处理时，newState 新成员需同步给 oldState
+          if (!oldState[key]) {
+            oldState[key] = value
+          }
+          const oldValue = oldState[key]
           merge(oldValue, value)
         }
-      })
+      }
     }
     // 最终用法
     merge(this.state, newState)
