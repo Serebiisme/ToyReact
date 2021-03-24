@@ -4,7 +4,7 @@ class MyComponent extends Component {
     super(props);
 
     this.state = {
-      a: 11111122223333,
+      a: 1,
       b: 2,
     };
   }
@@ -13,7 +13,13 @@ class MyComponent extends Component {
     return (
       <div>
         <h1>my Component</h1>
+        <button onclick={() => {
+          this.setState({
+            a: this.state.a + 1
+          })
+        }}>add</button>
         <p>{this.state.a}</p>
+        <p>{this.state.b}</p>
         {this.props.children}
       </div>
     );

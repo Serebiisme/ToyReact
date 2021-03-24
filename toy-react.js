@@ -40,7 +40,15 @@ class ElementWrapper {
   }
 
   setAttribute(name, value) {
-    this.root.setAttribute(name, value);
+    if (name.match(/^on([\s\S]+)$/)) {
+      // 事件绑定
+      const eventName = RegExp.$1;
+      // 这里的value 其实是一个 callback, 确保驼峰
+      this.root.addEventListener(eventName.replace(/^[\s\S]/, c => c.toLocaleLowerCase()), value)
+    } else {
+      // 属性绑定
+      this.root.setAttribute(name, value)
+    }
   }
 
   appendChild(component) {
@@ -86,6 +94,7 @@ export class Component {
     this.props = Object.create(null);
     this.props.children = [];
     this._root = null;
+    this._range = null;
   }
 
   setAttribute(name, value) {
@@ -98,11 +107,20 @@ export class Component {
 
   // 根据位置信息去 render DOM
   [RENDER_TO_DOM](range) {
+    // 缓存range 以便于 之后比对
+    this._range = range;
+
     // 递归
     const component = this.render()
     if (component) {
       component[RENDER_TO_DOM](range);
     }
+  }
+
+  // 重绘制逻辑
+  rerender() {
+    this._range.deleteContents();
+    this[RENDER_TO_DOM](this._range)
   }
 
   // 从取单个元素 转变为 取一个范围
@@ -115,6 +133,30 @@ export class Component {
 
   //   return this._root
   // }
+
+  // 设置状态
+  setState(newState) {
+    // 短路逻辑 排除 state 为 null 的情况
+    if (this.state !== null && typeof this.state !== 'object') {
+      this.state = newState;
+      this.rerender();
+      return;
+    }
+    let merge = (oldState, newState) => {
+      console.log(oldState, newState)
+      Object.entries(newState).forEach(([key, value]) => {
+        if (value !== null && typeof value !== 'object') {
+          Reflect.set(oldState, key, value)
+        } else {
+          const oldValue = Reflect.get(oldState, key)
+          merge(oldValue, value)
+        }
+      })
+    }
+    // 最终用法
+    merge(this.state, newState)
+    this.rerender()
+  }
 
   // ! 子组件需要实现 render 方法
   render() {
