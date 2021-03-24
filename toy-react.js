@@ -143,7 +143,6 @@ export class Component {
       return;
     }
     let merge = (oldState, newState) => {
-      console.log(oldState, newState)
       Object.entries(newState).forEach(([key, value]) => {
         if (value !== null && typeof value !== 'object') {
           Reflect.set(oldState, key, value)
