@@ -37,70 +37,11 @@ export function createElement(type, attrs, ...children) {
 
 const RENDER_TO_DOM = Symbol("render to dom");
 
-// 原生标签组件
-class ElementWrapper {
-  constructor(type) {
-    this.root = document.createElement(type);
-  }
-
-  setAttribute(name, value) {
-    if (name.match(/^on([\s\S]+)$/)) {
-      // 事件绑定
-      const eventName = RegExp.$1;
-      // 这里的value 其实是一个 callback, 确保驼峰
-      this.root.addEventListener(eventName.replace(/^[\s\S]/, c => c.toLocaleLowerCase()), value)
-    } else {
-      // className 特殊处理
-      if (name === 'className') {
-        name = 'class';
-      }
-      // 属性绑定
-      this.root.setAttribute(name, value)
-    }
-  }
-
-  appendChild(component) {
-    // 当 state值作为 child 传入时, 需判断子类型
-    if (typeof component !== "object") {
-      component = new TextWrapper(component);
-    }
-    // this.root.appendChild(component.root);
-
-    let range = new Range();
-    // 放置末尾
-    range.setStart(this.root, this.root.childNodes.length);
-    range.setEnd(this.root, this.root.childNodes.length)
-
-    component[RENDER_TO_DOM](range)
-  }
-
-  [RENDER_TO_DOM](range) {
-    // 删除范围内的内容
-    range.deleteContents();
-    // 插入节点
-    range.insertNode(this.root);
-  }
-}
-
-// 文本标签组件
-class TextWrapper {
-  constructor(content) {
-    this.root = document.createTextNode(content);
-  }
-
-  [RENDER_TO_DOM](range) {
-    // 删除范围内的内容
-    range.deleteContents();
-    // 插入节点
-    range.insertNode(this.root);
-  }
-}
-
-
 export class Component {
   constructor() {
     this.props = Object.create(null);
     this.props.children = [];
+
     this._root = null;
     this._range = null;
   }
@@ -111,6 +52,10 @@ export class Component {
 
   appendChild(component) {
     this.props.children.push(component);
+  }
+
+  get vdom() {
+    return this.render().vdom
   }
 
   // 根据位置信息去 render DOM
@@ -194,6 +139,92 @@ export class Component {
   // ! 子组件需要实现 render 方法
   render() {
     throw new Error('render function should be rewrite !')
+  }
+}
+
+// 原生标签组件
+class ElementWrapper extends Component {
+  constructor(type) {
+    // 调用super 使得其拥有 props 和 children
+    super(type)
+    this.root = document.createElement(type);
+
+    this.type = type;
+
+  }
+
+  // // 存 this.props
+  // setAttribute(name, value) {
+  //   if (name.match(/^on([\s\S]+)$/)) {
+  //     // 事件绑定
+  //     const eventName = RegExp.$1;
+  //     // 这里的value 其实是一个 callback, 确保驼峰
+  //     this.root.addEventListener(eventName.replace(/^[\s\S]/, c => c.toLocaleLowerCase()), value)
+  //   } else {
+  //     // className 特殊处理
+  //     if (name === 'className') {
+  //       name = 'class';
+  //     }
+  //     // 属性绑定
+  //     this.root.setAttribute(name, value)
+  //   }
+  // }
+
+  
+  // // 存 this.children
+  // appendChild(component) {
+  //   // 当 state值作为 child 传入时, 需判断子类型
+  //   if (typeof component !== "object") {
+  //     component = new TextWrapper(component);
+  //   }
+  //   // this.root.appendChild(component.root);
+    
+  //   let range = new Range();
+  //   // 放置末尾
+  //   range.setStart(this.root, this.root.childNodes.length);
+  //   range.setEnd(this.root, this.root.childNodes.length)
+    
+  //   component[RENDER_TO_DOM](range)
+  // }
+
+  get vdom() {
+    return {
+      type: this.type,
+      props: this.props,
+      children: this.props.children.map(child => child.vdom)
+    }
+  }
+  
+  [RENDER_TO_DOM](range) {
+    // 删除范围内的内容
+    range.deleteContents();
+    // 插入节点
+    range.insertNode(this.root);
+  }
+}
+
+// 文本标签组件
+class TextWrapper extends Component {
+  constructor(content) {
+    // 调用super 使得其拥有 props 和 children
+    super(content)
+    this.content = content
+
+    this.root = document.createTextNode(content);
+  }
+
+  get vdom() {
+    return {
+      type: 'text',
+      content: this.content
+    }
+  }
+
+  [RENDER_TO_DOM](range) {
+    // 删除范围内的内容
+    range.deleteContents();
+    // 插入节点
+    range.insertNode(this.root);
   }
 }
 

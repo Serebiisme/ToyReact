@@ -188,3 +188,14 @@ function calculateWinner(squares) {
   }
   return null;
 }
+
+// vdom demo 逻辑
+
+class Demo extends Component {
+  render() {
+    return <div>123</div>
+  }
+}
+
+const a = <Demo />
+console.log('a', a.vdom)
