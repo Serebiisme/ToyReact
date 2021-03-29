@@ -55,7 +55,11 @@ export class Component {
   }
 
   get vdom() {
-    return this.render().vdom
+    return this.render().vdom;
+  }
+
+  get vchildren() {
+    return this.props.children.map((child) => child.vdom);
   }
 
   // 根据位置信息去 render DOM
@@ -64,7 +68,7 @@ export class Component {
     this._range = range;
 
     // 递归
-    const component = this.render()
+    const component = this.render();
     if (component) {
       component[RENDER_TO_DOM](range);
     }
@@ -79,14 +83,13 @@ export class Component {
     let oldRange = this._range;
 
     // 此处需要做一个 rang 副本
-    const range = document.createRange()
-    range.setStart(oldRange.startContainer, oldRange.startOffset)
-    range.setEnd(oldRange.startContainer, oldRange.startOffset)
-    this[RENDER_TO_DOM](range)
-    
-    oldRange.setStart(range.endContainer, range.endOffset)
-    oldRange.deleteContents()
+    const range = document.createRange();
+    range.setStart(oldRange.startContainer, oldRange.startOffset);
+    range.setEnd(oldRange.startContainer, oldRange.startOffset);
+    this[RENDER_TO_DOM](range);
 
+    oldRange.setStart(range.endContainer, range.endOffset);
+    oldRange.deleteContents();
   }
 
   // 从取单个元素 转变为 取一个范围
@@ -103,7 +106,7 @@ export class Component {
   // 设置状态
   setState(newState) {
     // 短路逻辑 排除 state 为 null 的情况
-    if (this.state !== null && typeof this.state !== 'object') {
+    if (this.state !== null && typeof this.state !== "object") {
       this.state = newState;
       this.rerender();
       return;
@@ -119,26 +122,26 @@ export class Component {
       // })
       for (const key in newState) {
         const value = newState[key];
-        if (typeof value !== 'object') {
-          oldState[key] = value
+        if (typeof value !== "object") {
+          oldState[key] = value;
         } else {
           // 数组处理时，newState 新成员需同步给 oldState
           if (!oldState[key]) {
-            oldState[key] = value
+            oldState[key] = value;
           }
-          const oldValue = oldState[key]
-          merge(oldValue, value)
+          const oldValue = oldState[key];
+          merge(oldValue, value);
         }
       }
-    }
+    };
     // 最终用法
-    merge(this.state, newState)
-    this.rerender()
+    merge(this.state, newState);
+    this.rerender();
   }
 
   // ! 子组件需要实现 render 方法
   render() {
-    throw new Error('render function should be rewrite !')
+    throw new Error("render function should be rewrite !");
   }
 }
 
@@ -146,11 +149,11 @@ export class Component {
 class ElementWrapper extends Component {
   constructor(type) {
     // 调用super 使得其拥有 props 和 children
-    super(type)
-    this.root = document.createElement(type);
+    super(type);
+    // 基于 vdom 后 root 不需要了
+    // this.root = document.createElement(type);
 
     this.type = type;
-
   }
 
   // // 存 this.props
@@ -170,7 +173,6 @@ class ElementWrapper extends Component {
   //   }
   // }
 
-  
   // // 存 this.children
   // appendChild(component) {
   //   // 当 state值作为 child 传入时, 需判断子类型
@@ -178,28 +180,71 @@ class ElementWrapper extends Component {
   //     component = new TextWrapper(component);
   //   }
   //   // this.root.appendChild(component.root);
-    
+
   //   let range = new Range();
   //   // 放置末尾
   //   range.setStart(this.root, this.root.childNodes.length);
   //   range.setEnd(this.root, this.root.childNodes.length)
-    
+
   //   component[RENDER_TO_DOM](range)
   // }
 
   get vdom() {
-    return {
-      type: this.type,
-      props: this.props,
-      children: this.props.children.map(child => child.vdom)
-    }
+    // return {
+    //   type: this.type,
+    //   props: this.props,
+    //   children: this.props.children.map(child => child.vdom)
+    // }
+
+    return this;
   }
-  
+
   [RENDER_TO_DOM](range) {
     // 删除范围内的内容
     range.deleteContents();
+
+    // 创建标签节点
+    let root = document.createElement(this.type);
+
+    // 处理 props , 给原生标签添加属性
+    for (let name in this.props) {
+      const value = this.props[name];
+
+      if (name.match(/^on([\s\S]+)$/)) {
+        // 事件绑定
+        const eventName = RegExp.$1;
+        // 这里的value 其实是一个 callback, 确保驼峰
+        root.addEventListener(
+          eventName.replace(/^[\s\S]/, (c) => c.toLocaleLowerCase()),
+          value
+        );
+      } else {
+        // className 特殊处理
+        if (name === "className") {
+          name = "class";
+        }
+        // 属性绑定
+        root.setAttribute(name, value);
+      }
+    }
+
+    // 处理 children
+    for (let child of this.props.children) {
+      // 当 state值作为 child 传入时, 需判断子类型
+      if (typeof child !== "object") {
+        child = new TextWrapper(child);
+      }
+
+      let range = new Range();
+      // 放置末尾
+      range.setStart(root, root.childNodes.length);
+      range.setEnd(root, root.childNodes.length);
+
+      child[RENDER_TO_DOM](range);
+    }
+
     // 插入节点
-    range.insertNode(this.root);
+    range.insertNode(root);
   }
 }
 
@@ -207,17 +252,21 @@ class ElementWrapper extends Component {
 class TextWrapper extends Component {
   constructor(content) {
     // 调用super 使得其拥有 props 和 children
-    super(content)
-    this.content = content
+    super(content);
+    this.content = content;
+
+    this.type = "#text";
 
     this.root = document.createTextNode(content);
   }
 
   get vdom() {
-    return {
-      type: 'text',
-      content: this.content
-    }
+    // return {
+    //   type: 'text',
+    //   content: this.content
+    // }
+
+    return this;
   }
 
   [RENDER_TO_DOM](range) {
